@@ -1191,8 +1191,8 @@
       else if (role === 'lead') priority = 2;
       else if (role === 'sub_lead') priority = 3;
 
-      const newUser = {
-        id: Date.now().toString(),
+      // Object without client ID for Supabase auto-uuid generation
+      const newUserPayload = {
         email: email,
         full_name: name,
         assigned_club: club,
@@ -1203,20 +1203,23 @@
 
       if (supabaseClient) {
         try {
-          const { data, error } = await supabaseClient.from('users').insert([newUser]).select();
+          const { data, error } = await supabaseClient.from('users').insert([newUserPayload]).select();
           if (error) throw error;
           if (data && data[0]) usersData.push(data[0]);
           else await fetchUsers();
-          showToast(`Authorized user ${email} added successfully!`, "success");
+          showToast(`Authorized user ${email} added to Supabase!`, "success");
         } catch (err) {
-          usersData.push(newUser);
-          mockUsers.push(newUser);
-          showToast(`User ${email} authorized locally!`, "success");
+          console.error("Supabase insert user error:", err);
+          const fallbackUser = { id: Date.now().toString(), ...newUserPayload };
+          usersData.push(fallbackUser);
+          mockUsers.push(fallbackUser);
+          showToast(`Supabase insert failed: ${err.message || 'Check database permissions'}. Saved locally for session.`, "warning");
         }
       } else {
-        usersData.push(newUser);
-        mockUsers.push(newUser);
-        showToast(`User ${email} authorized locally!`, "success");
+        const fallbackUser = { id: Date.now().toString(), ...newUserPayload };
+        usersData.push(fallbackUser);
+        mockUsers.push(fallbackUser);
+        showToast(`User ${email} authorized locally!`, "info");
       }
 
       document.getElementById('new-user-email').value = '';
