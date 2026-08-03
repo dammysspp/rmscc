@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Co-Curricular Activities Reporting System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0284c7',
+              600: '#0284c7',
+              700: '#0369a1',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SheetJS (xlsx) CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-900 text-slate-100 antialiased selection:bg-sky-500 selection:text-white">
+
+  <!-- ========================================== -->
+  <!-- CONFIGURATION & INITIAL STATE              -->
+  <!-- ========================================== -->
+  <script>
+    // --- LIVE SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = "https://rocqhldniraonpyfmxqs.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvY3FobGRuaXJhb25weWZteHFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3Nzc4ODgsImV4cCI6MjEwMTM1Mzg4OH0.mTDJ1wDobMs95v94GiBIO2h6FM1BEk0eLl513Adwld4";
+
+    let supabaseClient = null;
+    try {
+      if (SUPABASE_URL && !SUPABASE_URL.includes("your-supabase-url") && SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes("your-anon-key")) {
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {
+      console.warn("Supabase client init fallback to local state.", e);
+    }
+
+    // Default Clubs List (Dynamic)
+    let clubsList = [
+      "ICT Club",
+      "Swimming Club",
+      "Robotics Club",
+      "Media Club",
+      "Debate Society",
+      "Drama & Arts Club",
+      "Music Ensemble",
+      "Chess Club",
+      "Environmental Club"
+    ];
+
+    // Default Demo Authorized Users Database
+    let mockUsers = [
+      {
+        id: "u0",
+        email: "aderonke.aiyedun@rolemodelschool.com",
+        full_name: "Aderonke Aiyedun",
+        role: "admin",
+        role_title: "Administrator",
+        assigned_club: "ALL",
+        priority_level: 1
+      },
+      {
+        id: "u1",
+        email: "samuel@school.edu",
+        full_name: "Samuel Okon",
+        role: "lead",
+        role_title: "ICT Club Lead",
+        assigned_club: "ICT Club",
+        priority_level: 2
+      },
+      {
+        id: "u2",
+        email: "sarah@school.edu",
+        full_name: "Sarah Connor",
+        role: "lead",
+        role_title: "Head Swimming Coach",
+        assigned_club: "Swimming Club",
+        priority_level: 2
+      },
+      {
+        id: "u3",
+        email: "admin@school.edu",
+        full_name: "System Administrator",
+        role: "admin",
+        role_title: "Head of Co-Curriculars",
+        assigned_club: "ALL",
+        priority_level: 1
+      }
+    ];
+
+    // Mock Demo Reports Database
+    let mockDatabase = [
+      {
+        id: "1",
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+        club_name: "ICT Club",
+        reporting_date: "2026-07-31",
+        submitted_by: "Samuel Okon",
+        role_title: "ICT Club Lead",
+        enrolled_members: 25,
+        present_members: 24,
+        absent_members: 1,
+        attendance_rate: 96.0,
+        activity_title: "Web Development & GitHub Pages Deployment",
+        activity_description: "Students learned HTML5 semantics and deployed personal landing pages directly to GitHub Pages.",
+        key_deliverables: "22 student web pages live on GitHub Pages.",
+        activity_status: "Completed",
+        challenges: "Occasional internet bandwidth drop during large git pushes.",
+        impact_level: "Low",
+        immediate_action: "Staggered git push times across groups.",
+        suggestions: "Request IT to boost lab Wi-Fi quota for Friday afternoons.",
+        planned_activity: "Introduction to JavaScript APIs.",
+        support_needed: "None"
+      },
+      {
+        id: "2",
+        created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+        club_name: "Swimming Club",
+        reporting_date: "2026-07-29",
+        submitted_by: "Sarah Connor",
+        role_title: "Head Swimming Coach",
+        enrolled_members: 30,
+        present_members: 28,
+        absent_members: 2,
+        attendance_rate: 93.3,
+        activity_title: "Freestyle Endurance Drills",
+        activity_description: "Focus on flip turns and breathing efficiency across 50m laps.",
+        key_deliverables: "Recorded lap times for all junior varsity swimmers.",
+        activity_status: "Completed",
+        challenges: "Pool temperature regulation system fluctuated.",
+        impact_level: "Low",
+        immediate_action: "Reported heating sensor issue to facilities management.",
+        suggestions: "Schedule bi-weekly HVAC checks for pool maintenance.",
+        planned_activity: "Inter-club time trials preparation.",
+        support_needed: "Extra stopwatches and kickboards."
+      }
+    ];
+
+    // Global App State
+    let currentUser = null;
+    let currentRole = 'club'; 
+    let selectedClub = clubsList[0];
+    let activeClubTab = 'submit'; 
+    let activeAdminTab = 'reports'; // 'reports' | 'users' | 'clubs'
+    let reportsData = [];
+    let usersData = [];
+
+    // Admin Table Filters
+    let adminSearch = '';
+    let adminClubFilter = 'ALL';
+    let adminStatusFilter = 'ALL';
+    let adminDateFilter = 'ALL'; // 'ALL' | specific date YYYY-MM-DD
+  </script>
+
+  <!-- ========================================== -->
+  <!-- HEADER & NAVBAR                            -->
+  <!-- ========================================== -->
+  <header id="app-header" class="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-40 hidden">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-0 sm:h-16 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center space-x-2.5 sm:space-x-3">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
+          <i data-lucide="award" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-lg font-bold text-white tracking-tight leading-none">Co-Curricular Reports</h1>
+          <p class="text-[10px] sm:text-xs text-slate-400 mt-0.5">Weekly Activity Tracking</p>
+        </div>
+      </div>
+
+      <!-- Right Header Group (Role Switcher & User Profile) -->
+      <div class="flex items-center space-x-2 sm:space-x-4 shrink-0">
+        
+        <!-- Role Switcher (Admin Only) -->
+        <div id="role-switcher-container" class="hidden items-center bg-slate-900 p-0.5 sm:p-1 rounded-xl border border-slate-800">
+          <button id="btn-role-club" onclick="setRole('club')" class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all flex items-center space-x-1 bg-sky-600 text-white shadow-md">
+            <i data-lucide="users" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i>
+            <span>Club</span>
+          </button>
+          <button id="btn-role-admin" onclick="setRole('admin')" class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all flex items-center space-x-1 text-slate-400 hover:text-white">
+            <i data-lucide="shield-check" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i>
+            <span>Admin</span>
+          </button>
+        </div>
+
+        <!-- Logged-in User Badge -->
+        <div class="flex items-center space-x-2 sm:space-x-3 border-l border-slate-800 pl-2.5 sm:pl-4">
+          <div class="text-right max-w-[120px] sm:max-w-none truncate">
+            <p id="user-display-name" class="text-[11px] sm:text-xs font-bold text-white leading-tight truncate">User Name</p>
+            <p id="user-display-role" class="text-[9px] sm:text-[11px] text-sky-400 font-medium truncate">Role • Club</p>
+          </div>
+          <button onclick="handleLogout()" title="Sign Out" class="p-1.5 sm:p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 hover:bg-rose-500/10 transition shrink-0">
+            <i data-lucide="log-out" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Connection Status Banner -->
+  <div id="supa-status-banner" class="hidden bg-emerald-950/60 border-b border-emerald-800/50 px-4 py-1.5 text-xs text-emerald-300 items-center justify-center space-x-2">
+    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+    <span>Connected to <strong>Supabase</strong> live database.</span>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- ========================================== -->
+    <!-- 0. LOGIN VIEW                              -->
+    <!-- ========================================== -->
+    <div id="view-login" class="max-w-md mx-auto my-12 bg-slate-800/40 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-sky-500/30">
+          <i data-lucide="lock" class="w-7 h-7 text-white"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-white tracking-tight">Portal Authentication</h2>
+        <p class="text-xs text-slate-400">Enter your authorized institutional email address to log in.</p>
+      </div>
+
+      <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Authorized Email Address *</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5"></i>
+            <input type="email" id="login-email" required placeholder="e.g. samuel@school.edu" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none transition">
+          </div>
+        </div>
+
+        <button type="submit" id="btn-login" class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-sky-500/25 transition-all flex items-center justify-center space-x-2">
+          <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
+          <span>Authenticate & Access</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. CLUB VIEW (MEMBERS / LEADS)             -->
+    <!-- ========================================== -->
+    <div id="view-club" class="hidden space-y-6">
+      
+      <!-- Top Bar: Active Club Display & Sub-Tabs -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800/40 p-3 sm:p-4 rounded-2xl border border-slate-800">
+        
+        <!-- Club Selector Dropdown -->
+        <div class="flex flex-wrap items-center gap-2">
+          <label for="club-select" class="text-xs sm:text-sm font-semibold text-slate-300 flex items-center space-x-1.5 shrink-0">
+            <i data-lucide="shield" class="w-4 h-4 text-sky-400"></i>
+            <span>Active Club:</span>
+          </label>
+          <div class="relative flex-1 sm:flex-none min-w-[160px]">
+            <select id="club-select" onchange="onClubSelectChange(this.value)" class="w-full bg-slate-900 text-white font-semibold text-sm sm:text-base border border-slate-700 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-sm cursor-pointer hover:border-slate-600 transition disabled:opacity-80 disabled:cursor-not-allowed">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <span id="club-lock-badge" class="hidden px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center space-x-1 shrink-0">
+            <i data-lucide="lock" class="w-3 h-3"></i>
+            <span>Assigned Club Only</span>
+          </span>
+        </div>
+
+        <!-- Sub-Tabs Switcher -->
+        <div class="flex items-center space-x-1 sm:space-x-2 bg-slate-900/80 p-1 rounded-xl border border-slate-800 w-full sm:w-auto justify-stretch">
+          <button id="tab-btn-submit" onclick="setClubTab('submit')" class="flex-1 sm:flex-none px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 bg-sky-600 text-white shadow-sm">
+            <i data-lucide="file-plus" class="w-3.5 h-3.5"></i>
+            <span>Submit Report</span>
+          </button>
+          <button id="tab-btn-history" onclick="setClubTab('history')" class="flex-1 sm:flex-none px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 text-slate-400 hover:text-white">
+            <i data-lucide="history" class="w-3.5 h-3.5"></i>
+            <span>My Club History</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-TAB 1A: SUBMIT REPORT FORM -->
+      <div id="club-tab-submit" class="bg-slate-800/30 border border-slate-800/80 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div class="mb-6 pb-4 border-b border-slate-800">
+          <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+            <i data-lucide="clipboard-edit" class="w-5 h-5 text-sky-400"></i>
+            <span>Weekly Activity Submission</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Please provide accurate statistics and outcomes for the reporting period.</p>
+        </div>
+
+        <form id="report-form" onsubmit="handleFormSubmit(event)" class="space-y-8">
+          
+          <!-- SECTION 1: REPORT METADATA -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+              <span>1. Basic Details & Ownership</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Reporting Date *</label>
+                <input type="date" id="field-reporting-date" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Submitted By (Your Name) *</label>
+                <input type="text" id="field-submitted-by" required placeholder="e.g. Samuel Okon" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Role / Position *</label>
+                <input type="text" id="field-role-title" required placeholder="e.g. ICT Club Lead" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: ATTENDANCE METRICS -->
+          <div class="space-y-4 pt-4 border-t border-slate-800/60">
+            <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
+              <i data-lucide="users" class="w-4 h-4"></i>
+              <span>2. Attendance & Turnout</span>
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Total Enrolled Members *</label>
+                <input type="number" id="field-enrolled" required min="1" oninput="calcAttendance()" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Members Present *</label>
+                <input type="number" id="field-present" required min="0" oninput="calcAttendance()" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Members Absent</label>
+                <input type="number" id="field-absent" readonly placeholder="0" class="w-full bg-slate-950 border border-slate-800 text-slate-400 rounded-xl px-3.5 py-2.5 text-sm cursor-not-allowed">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Attendance Rate (%)</label>
+                <input type="text" id="field-attendance-rate" readonly placeholder="0.0%" class="w-full bg-slate-950 border border-slate-800 text-sky-400 font-bold rounded-xl px-3.5 py-2.5 text-sm cursor-not-allowed">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 3: ACTIVITY DETAILS -->
+          <div class="space-y-4 pt-4 border-t border-slate-800/60">
+            <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
+              <i data-lucide="activity" class="w-4 h-4"></i>
+              <span>3. Activity & Deliverables</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Activity Title *</label>
+                <input type="text" id="field-activity-title" required placeholder="Main topic or activity performed this session" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Activity Status *</label>
+                <select id="field-activity-status" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                  <option value="Completed">Completed</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Postponed">Postponed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Activity Description</label>
+                <textarea id="field-activity-description" rows="3" placeholder="Brief summary of activities, sessions, or drills..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Key Deliverables & Outcomes</label>
+                <textarea id="field-key-deliverables" rows="3" placeholder="Tangible outputs, achievements, or milestones achieved..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 4: CHALLENGES & IMPACT -->
+          <div class="space-y-4 pt-4 border-t border-slate-800/60">
+            <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+              <span>4. Challenges & Immediate Actions</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Challenges Encountered</label>
+                <input type="text" id="field-challenges" placeholder="Equipments broken, venue issues, weather, etc." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Impact Level *</label>
+                <select id="field-impact-level" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                  <option value="None">None</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Immediate Action Taken</label>
+                <textarea id="field-immediate-action" rows="2" placeholder="How did you resolve or mitigate it on the spot?" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Suggestions for Improvement</label>
+                <textarea id="field-suggestions" rows="2" placeholder="Recommendations for future sessions..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 5: FUTURE PLANNING & SUPPORT -->
+          <div class="space-y-4 pt-4 border-t border-slate-800/60">
+            <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
+              <i data-lucide="calendar" class="w-4 h-4"></i>
+              <span>5. Next Week Planning & Support Requested</span>
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Planned Activity for Next Week</label>
+                <textarea id="field-planned-activity" rows="2" placeholder="Upcoming topics or events planned..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none"></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Support Needed from Administration</label>
+                <textarea id="field-support-needed" rows="2" placeholder="Budget, room booking, transportation, equipment..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="flex justify-end pt-4 border-t border-slate-800">
+            <button type="submit" id="btn-submit-form" class="px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-sky-500/25 transition-all flex items-center space-x-2 transform active:scale-95">
+              <i data-lucide="send" class="w-5 h-5"></i>
+              <span>Submit Report</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- SUB-TAB 1B: MY CLUB HISTORY -->
+      <div id="club-tab-history" class="hidden space-y-4">
+        <div class="flex items-center justify-between bg-slate-800/30 p-4 rounded-xl border border-slate-800">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center space-x-2">
+              <i data-lucide="clock" class="w-5 h-5 text-sky-400"></i>
+              <span id="club-history-title">Submissions History</span>
+            </h2>
+            <p class="text-xs text-slate-400">Viewing reports strictly filtered for your active club.</p>
+          </div>
+          <span id="club-history-count" class="px-3 py-1 bg-slate-800 text-sky-400 rounded-full text-xs font-semibold border border-slate-700">0 Reports</span>
+        </div>
+
+        <div class="overflow-x-auto bg-slate-800/30 border border-slate-800 rounded-2xl shadow-xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/60">
+                <th class="py-3.5 px-4">Date</th>
+                <th class="py-3.5 px-4">Activity Title</th>
+                <th class="py-3.5 px-4">Reporter</th>
+                <th class="py-3.5 px-4">Turnout</th>
+                <th class="py-3.5 px-4">Status</th>
+                <th class="py-3.5 px-4">Impact</th>
+                <th class="py-3.5 px-4 text-right">Details</th>
+              </tr>
+            </thead>
+            <tbody id="club-history-tbody" class="divide-y divide-slate-800/60 text-sm">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. ADMIN DASHBOARD VIEW                    -->
+    <!-- ========================================== -->
+    <div id="view-admin" class="hidden space-y-6">
+
+      <!-- Admin Sub-Navigation Tabs -->
+      <div class="flex flex-wrap items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 w-fit">
+        <button id="admin-subtab-btn-reports" onclick="setAdminSubTab('reports')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 bg-sky-600 text-white shadow">
+          <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+          <span>Global Reports & Master Data</span>
+        </button>
+        <button id="admin-subtab-btn-users" onclick="setAdminSubTab('users')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+          <i data-lucide="user-cog" class="w-4 h-4"></i>
+          <span>User & Role Permissions</span>
+        </button>
+        <button id="admin-subtab-btn-clubs" onclick="setAdminSubTab('clubs')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+          <i data-lucide="layers" class="w-4 h-4"></i>
+          <span>Manage Clubs</span>
+        </button>
+      </div>
+
+      <!-- ADMIN SUBTAB 1: REPORTS MASTER DASHBOARD -->
+      <div id="admin-subtab-reports" class="space-y-6">
+        
+        <!-- GLOBAL STATS BANNER -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div class="bg-slate-800/40 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4 shadow-lg">
+            <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+              <i data-lucide="files" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 font-medium">Total Reports Submitted</p>
+              <p id="kpi-total-reports" class="text-2xl font-bold text-white mt-1">0</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/40 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4 shadow-lg">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <i data-lucide="percent" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 font-medium">Overall Avg Attendance</p>
+              <p id="kpi-avg-attendance" class="text-2xl font-bold text-white mt-1">0.0%</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/40 border border-slate-800 p-5 rounded-2xl flex items-center space-x-4 shadow-lg">
+            <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+              <i data-lucide="alert-octagon" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 font-medium">Flagged High Impact Challenges</p>
+              <p id="kpi-flagged-challenges" class="text-2xl font-bold text-white mt-1">0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- MASTER DATA TABLE CONTROLS & SEPARATE / JOINT EXPORTS -->
+        <div class="bg-slate-800/40 border border-slate-800 p-5 rounded-2xl space-y-4 shadow-xl">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            <!-- Filters -->
+            <div class="flex flex-wrap items-center gap-3 flex-1">
+              <div class="relative min-w-[180px] flex-1 max-w-xs">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                <input type="text" id="admin-search" oninput="onAdminFilterChange()" placeholder="Search reports..." class="w-full bg-slate-900 border border-slate-700 pl-10 pr-3.5 py-2 rounded-xl text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+
+              <!-- Club Filter for Viewing & Separate Export -->
+              <select id="admin-club-filter" onchange="onAdminFilterChange()" class="bg-slate-900 border border-slate-700 text-sm text-white rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <option value="ALL">All Clubs (Joint)</option>
+              </select>
+
+              <!-- Specific Week/Date Filter -->
+              <select id="admin-date-filter" onchange="onAdminFilterChange()" class="bg-slate-900 border border-slate-700 text-sm text-white rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <option value="ALL">All Weeks / Dates (Joint)</option>
+                <!-- Populated dynamically with unique dates -->
+              </select>
+
+              <!-- Status Filter -->
+              <select id="admin-status-filter" onchange="onAdminFilterChange()" class="bg-slate-900 border border-slate-700 text-sm text-white rounded-xl px-3.5 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <option value="ALL">All Statuses</option>
+                <option value="Completed">Completed</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Postponed">Postponed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <!-- Export Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <button onclick="exportData('csv')" title="Export current filtered view to CSV" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-medium transition flex items-center space-x-1.5 shadow">
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span id="csv-export-btn-text">CSV Export</span>
+              </button>
+              
+              <button onclick="exportData('excel')" title="Export current view to Excel" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-emerald-600/20">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                <span id="excel-export-btn-text">Excel Export</span>
+              </button>
+
+              <!-- Multi-Sheet Club Workbook -->
+              <button onclick="exportMultiSheetClubExcel()" title="Export workbook with separate sheets for each Club" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20">
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                <span>Club Workbook (.xlsx)</span>
+              </button>
+
+              <!-- Multi-Sheet Weekly Workbook -->
+              <button onclick="exportMultiSheetWeeklyExcel()" title="Export workbook with separate sheets for each Reporting Week/Date" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-sky-600/20">
+                <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
+                <span>Weekly Workbook (.xlsx)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Filter Summary Banner -->
+          <div class="flex items-center justify-between text-xs text-slate-400 pt-1">
+            <span id="admin-table-summary-text">Showing reports across all clubs and weeks.</span>
+            <span class="text-[11px] text-slate-500">Filter by specific week or club to download dedicated separate files.</span>
+          </div>
+
+          <!-- Master Table -->
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/80">
+                  <th class="py-3.5 px-4">Club Name</th>
+                  <th class="py-3.5 px-4">Date</th>
+                  <th class="py-3.5 px-4">Activity Title</th>
+                  <th class="py-3.5 px-4">Reporter</th>
+                  <th class="py-3.5 px-4">Turnout (Rate)</th>
+                  <th class="py-3.5 px-4">Status</th>
+                  <th class="py-3.5 px-4">Impact</th>
+                  <th class="py-3.5 px-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-master-tbody" class="divide-y divide-slate-800/60 text-sm">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ADMIN SUBTAB 2: USER & ROLE MANAGEMENT -->
+      <div id="admin-subtab-users" class="hidden space-y-6">
+        <div class="bg-slate-800/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                <i data-lucide="user-plus" class="w-5 h-5 text-sky-400"></i>
+                <span>Authorize New Club Lead / Member</span>
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Assign an email to a club with specific role priorities.</p>
+            </div>
+          </div>
+
+          <form onsubmit="handleAddUser(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Email Address *</label>
+              <input type="email" id="new-user-email" required placeholder="user@school.edu" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Full Name *</label>
+              <input type="text" id="new-user-name" required placeholder="e.g. John Smith" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Assigned Club *</label>
+              <select id="new-user-club" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">System Role *</label>
+              <select id="new-user-role" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                <option value="lead">Club Lead (Priority 2)</option>
+                <option value="sub_lead">Sub-Lead (Priority 3)</option>
+                <option value="member">Member (Priority 4)</option>
+                <option value="admin">Administrator (Priority 1)</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2 md:col-span-1 flex items-end">
+              <button type="submit" class="w-full py-2 px-4 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl transition shadow-md flex items-center justify-center space-x-1.5 h-[38px]">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Add User</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Authorized Users List Table -->
+        <div class="bg-slate-800/30 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+            <h4 class="font-bold text-white text-sm">Authorized User Accounts & Permissions</h4>
+            <span id="user-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">0 Active Users</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/40">
+                  <th class="py-3 px-4">User</th>
+                  <th class="py-3 px-4">Email</th>
+                  <th class="py-3 px-4">Role & Priority</th>
+                  <th class="py-3 px-4">Assigned Club</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-tbody" class="divide-y divide-slate-800/60 text-sm">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN SUBTAB 3: MANAGE CLUBS (ADD / REMOVE CLUBS) -->
+      <div id="admin-subtab-clubs" class="hidden space-y-6">
+        <div class="bg-slate-800/30 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+          <div class="pb-4 border-b border-slate-800">
+            <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+              <i data-lucide="folder-plus" class="w-5 h-5 text-sky-400"></i>
+              <span>Create New Club Category</span>
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">Add a new club to the system dropdowns and authorization assignments.</p>
+          </div>
+
+          <form onsubmit="handleAddClub(event)" class="flex flex-col sm:flex-row items-end gap-4 max-w-xl">
+            <div class="flex-1 w-full">
+              <label class="block text-xs font-medium text-slate-300 mb-1">New Club Name *</label>
+              <input type="text" id="new-club-name" required placeholder="e.g. Photography Club" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+            </div>
+            <button type="submit" class="py-2 px-5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition shadow-md flex items-center justify-center space-x-1.5 h-[38px] shrink-0">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Create Club</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Clubs List Table -->
+        <div class="bg-slate-800/30 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+            <h4 class="font-bold text-white text-sm">Active Club Organizations</h4>
+            <span id="clubs-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">0 Clubs</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/40">
+                  <th class="py-3 px-4">Club Name</th>
+                  <th class="py-3 px-4">Reports Submitted</th>
+                  <th class="py-3 px-4">Assigned Leads</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-clubs-tbody" class="divide-y divide-slate-800/60 text-sm">
+                <!-- Dynamically Populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: DETAILED REPORT VIEW                -->
+  <!-- ========================================== -->
+  <div id="modal-detail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 id="modal-club-name" class="font-bold text-white text-base">Club Name</h3>
+            <p id="modal-date" class="text-xs text-slate-400">Date</p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="modal-body-content" class="p-6 space-y-6 overflow-y-auto text-sm text-slate-300">
+        <!-- Dynamic content -->
+      </div>
+
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-950 flex justify-end">
+        <button onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition">
+          Close Window
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT APPLICATION LOGIC               -->
+  <!-- ========================================== -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('field-reporting-date').value = new Date().toISOString().split('T')[0];
+      populateClubDropdowns();
+
+      const savedSession = sessionStorage.getItem('co_curr_user');
+      if (savedSession) {
+        try {
+          currentUser = JSON.parse(savedSession);
+          initUserSession();
+        } catch (e) {
+          sessionStorage.removeItem('co_curr_user');
+        }
+      }
+
+      lucide.createIcons();
+    });
+
+    function populateClubDropdowns() {
+      const clubSelect = document.getElementById('club-select');
+      const adminFilter = document.getElementById('admin-club-filter');
+      const newUserClub = document.getElementById('new-user-club');
+
+      clubSelect.innerHTML = clubsList.map(c => `<option value="${c}">${c}</option>`).join('');
+      adminFilter.innerHTML = `<option value="ALL">All Clubs (Joint)</option>` + clubsList.map(c => `<option value="${c}">${c}</option>`).join('');
+      newUserClub.innerHTML = `<option value="ALL">ALL (Admin Access)</option>` + clubsList.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function populateDateFilterDropdown() {
+      const dateFilter = document.getElementById('admin-date-filter');
+      const uniqueDates = [...new Set(reportsData.map(r => r.reporting_date))].sort().reverse();
+      
+      dateFilter.innerHTML = `<option value="ALL">All Weeks / Dates (Joint)</option>` + 
+        uniqueDates.map(d => `<option value="${d}">${d} (Week of ${d})</option>`).join('');
+    }
+
+    // --- AUTHENTICATION LOGIC ---
+    function presetLogin(email) {
+      document.getElementById('login-email').value = email;
+      handleLoginSubmit(new Event('submit'));
+    }
+
+    async function handleLoginSubmit(e) {
+      if (e) e.preventDefault();
+      const inputEmail = document.getElementById('login-email').value.trim().toLowerCase();
+      if (!inputEmail) return;
+
+      let user = usersData.find(u => u.email.toLowerCase() === inputEmail) || mockUsers.find(u => u.email.toLowerCase() === inputEmail);
+
+      if (!user) {
+        showToast(`Email ${inputEmail} is not authorized. Contact an administrator.`, "error");
+        return;
+      }
+
+      currentUser = user;
+      sessionStorage.setItem('co_curr_user', JSON.stringify(currentUser));
+      showToast(`Welcome back, ${currentUser.full_name}!`, "success");
+      initUserSession();
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      sessionStorage.removeItem('co_curr_user');
+      document.getElementById('view-login').classList.remove('hidden');
+      document.getElementById('view-club').classList.add('hidden');
+      document.getElementById('view-admin').classList.add('hidden');
+      document.getElementById('app-header').classList.add('hidden');
+      document.getElementById('supa-status-banner').classList.add('hidden');
+      showToast("Signed out successfully.", "info");
+    }
+
+    function initUserSession() {
+      document.getElementById('view-login').classList.add('hidden');
+      document.getElementById('app-header').classList.remove('hidden');
+      document.getElementById('supa-status-banner').classList.remove('hidden');
+      document.getElementById('supa-status-banner').classList.add('flex');
+
+      document.getElementById('user-display-name').innerText = currentUser.full_name;
+      document.getElementById('user-display-role').innerText = `${currentUser.role.toUpperCase()} • ${currentUser.assigned_club}`;
+
+      document.getElementById('field-submitted-by').value = currentUser.full_name;
+      document.getElementById('field-role-title').value = currentUser.role_title || `${currentUser.assigned_club} Lead`;
+
+      const roleSwitcher = document.getElementById('role-switcher-container');
+      const clubSelect = document.getElementById('club-select');
+      const clubLockBadge = document.getElementById('club-lock-badge');
+
+      if (currentUser.role === 'admin') {
+        roleSwitcher.classList.remove('hidden');
+        roleSwitcher.classList.add('flex');
+        clubSelect.disabled = false;
+        clubLockBadge.classList.add('hidden');
+        setRole('admin');
+      } else {
+        roleSwitcher.classList.add('hidden');
+        roleSwitcher.classList.remove('flex');
+        
+        selectedClub = currentUser.assigned_club;
+        clubSelect.value = selectedClub;
+        clubSelect.disabled = true;
+        clubLockBadge.classList.remove('hidden');
+        
+        setRole('club');
+      }
+
+      fetchReports();
+      fetchUsers();
+      fetchClubs();
+    }
+
+    // --- ROLE & SUBTAB SWITCHING ---
+    function setRole(role) {
+      currentRole = role;
+      const btnClub = document.getElementById('btn-role-club');
+      const btnAdmin = document.getElementById('btn-role-admin');
+      const viewClub = document.getElementById('view-club');
+      const viewAdmin = document.getElementById('view-admin');
+
+      if (role === 'club') {
+        btnClub.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 bg-sky-600 text-white shadow-md";
+        btnAdmin.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 text-slate-400 hover:text-white";
+        viewClub.classList.remove('hidden');
+        viewAdmin.classList.add('hidden');
+      } else {
+        btnAdmin.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 bg-sky-600 text-white shadow-md";
+        btnClub.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 text-slate-400 hover:text-white";
+        viewAdmin.classList.remove('hidden');
+        viewClub.classList.add('hidden');
+        renderAdminDashboard();
+      }
+    }
+
+    function setClubTab(tab) {
+      activeClubTab = tab;
+      const btnSubmit = document.getElementById('tab-btn-submit');
+      const btnHistory = document.getElementById('tab-btn-history');
+      const tabSubmit = document.getElementById('club-tab-submit');
+      const tabHistory = document.getElementById('club-tab-history');
+
+      if (tab === 'submit') {
+        btnSubmit.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 bg-sky-600 text-white shadow-sm";
+        btnHistory.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 text-slate-400 hover:text-white";
+        tabSubmit.classList.remove('hidden');
+        tabHistory.classList.add('hidden');
+      } else {
+        btnHistory.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 bg-sky-600 text-white shadow-sm";
+        btnSubmit.className = "px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center space-x-2 text-slate-400 hover:text-white";
+        tabHistory.classList.remove('hidden');
+        tabSubmit.classList.add('hidden');
+        renderClubHistory();
+      }
+    }
+
+    function setAdminSubTab(tab) {
+      activeAdminTab = tab;
+      const btnReports = document.getElementById('admin-subtab-btn-reports');
+      const btnUsers = document.getElementById('admin-subtab-btn-users');
+      const btnClubs = document.getElementById('admin-subtab-btn-clubs');
+
+      const tabReports = document.getElementById('admin-subtab-reports');
+      const tabUsers = document.getElementById('admin-subtab-users');
+      const tabClubs = document.getElementById('admin-subtab-clubs');
+
+      btnReports.className = "px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 " + (tab === 'reports' ? "bg-sky-600 text-white shadow" : "text-slate-400 hover:text-white");
+      btnUsers.className = "px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 " + (tab === 'users' ? "bg-sky-600 text-white shadow" : "text-slate-400 hover:text-white");
+      btnClubs.className = "px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 " + (tab === 'clubs' ? "bg-sky-600 text-white shadow" : "text-slate-400 hover:text-white");
+
+      tabReports.classList.toggle('hidden', tab !== 'reports');
+      tabUsers.classList.toggle('hidden', tab !== 'users');
+      tabClubs.classList.toggle('hidden', tab !== 'clubs');
+
+      if (tab === 'reports') renderAdminDashboard();
+      if (tab === 'users') renderAdminUsersTable();
+      if (tab === 'clubs') renderAdminClubsTable();
+    }
+
+    function onClubSelectChange(val) {
+      selectedClub = val;
+      if (activeClubTab === 'history') renderClubHistory();
+    }
+
+    function calcAttendance() {
+      const enrolled = parseInt(document.getElementById('field-enrolled').value) || 0;
+      const present = parseInt(document.getElementById('field-present').value) || 0;
+      const absent = Math.max(0, enrolled - present);
+      document.getElementById('field-absent').value = absent;
+      const rate = enrolled > 0 ? ((present / enrolled) * 100).toFixed(1) : 0;
+      document.getElementById('field-attendance-rate').value = rate + "%";
+    }
+
+    // --- DATA MANAGEMENT & SUPABASE SYNC ---
+    async function fetchReports() {
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('club_reports').select('*').order('reporting_date', { ascending: false });
+          if (error) throw error;
+          reportsData = data || [];
+        } catch (err) {
+          reportsData = [...mockDatabase];
+        }
+      } else {
+        reportsData = [...mockDatabase];
+      }
+
+      populateDateFilterDropdown();
+      if (currentRole === 'admin') renderAdminDashboard();
+      if (activeClubTab === 'history') renderClubHistory();
+    }
+
+    async function fetchUsers() {
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('users').select('*');
+          if (error) throw error;
+          usersData = data || [];
+        } catch (err) {
+          usersData = [...mockUsers];
+        }
+      } else {
+        usersData = [...mockUsers];
+      }
+
+      if (activeAdminTab === 'users') renderAdminUsersTable();
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const enrolled = parseInt(document.getElementById('field-enrolled').value) || 0;
+      const present = parseInt(document.getElementById('field-present').value) || 0;
+      const absent = parseInt(document.getElementById('field-absent').value) || 0;
+      const attendance_rate = enrolled > 0 ? parseFloat(((present / enrolled) * 100).toFixed(1)) : 0;
+
+      const newReport = {
+        club_name: selectedClub,
+        reporting_date: document.getElementById('field-reporting-date').value,
+        submitted_by: document.getElementById('field-submitted-by').value,
+        role_title: document.getElementById('field-role-title').value,
+        enrolled_members: enrolled,
+        present_members: present,
+        absent_members: absent,
+        attendance_rate: attendance_rate,
+        activity_title: document.getElementById('field-activity-title').value,
+        activity_description: document.getElementById('field-activity-description').value,
+        key_deliverables: document.getElementById('field-key-deliverables').value,
+        activity_status: document.getElementById('field-activity-status').value,
+        challenges: document.getElementById('field-challenges').value,
+        impact_level: document.getElementById('field-impact-level').value,
+        immediate_action: document.getElementById('field-immediate-action').value,
+        suggestions: document.getElementById('field-suggestions').value,
+        planned_activity: document.getElementById('field-planned-activity').value,
+        support_needed: document.getElementById('field-support-needed').value,
+      };
+
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('club_reports').insert([newReport]).select();
+          if (error) throw error;
+          if (data && data[0]) reportsData.unshift(data[0]);
+          else await fetchReports();
+          showToast("Weekly report submitted successfully!", "success");
+        } catch (err) {
+          newReport.id = Date.now().toString();
+          newReport.created_at = new Date().toISOString();
+          reportsData.unshift(newReport);
+          showToast("Report saved locally!", "success");
+        }
+      } else {
+        newReport.id = Date.now().toString();
+        newReport.created_at = new Date().toISOString();
+        reportsData.unshift(newReport);
+        showToast("Report saved locally!", "success");
+      }
+
+      populateDateFilterDropdown();
+
+      document.getElementById('field-activity-title').value = '';
+      document.getElementById('field-activity-description').value = '';
+      document.getElementById('field-key-deliverables').value = '';
+      document.getElementById('field-challenges').value = '';
+      document.getElementById('field-immediate-action').value = '';
+      document.getElementById('field-suggestions').value = '';
+      document.getElementById('field-planned-activity').value = '';
+      document.getElementById('field-support-needed').value = '';
+
+      setClubTab('history');
+    }
+
+    // --- CLUB MANAGEMENT (ADD & REMOVE CLUBS) ---
+    async function fetchClubs() {
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('clubs').select('*').order('name');
+          if (error) throw error;
+          if (data && data.length > 0) {
+            clubsList = data.map(c => c.name);
+            populateClubDropdowns();
+          }
+        } catch (err) {
+          console.warn("Supabase fetch clubs fallback:", err);
+        }
+      }
+      if (activeAdminTab === 'clubs') renderAdminClubsTable();
+    }
+
+    async function handleAddClub(e) {
+      e.preventDefault();
+      const clubName = document.getElementById('new-club-name').value.trim();
+      if (!clubName) return;
+
+      if (clubsList.some(c => c.toLowerCase() === clubName.toLowerCase())) {
+        showToast(`Club "${clubName}" already exists!`, "warning");
+        return;
+      }
+
+      if (supabaseClient) {
+        try {
+          const { error } = await supabaseClient.from('clubs').insert([{ name: clubName }]);
+          if (error) throw error;
+          showToast(`Added club "${clubName}" to Supabase!`, "success");
+          clubsList.push(clubName);
+          populateClubDropdowns();
+          await fetchClubs();
+        } catch (err) {
+          console.error("Supabase add club error:", err);
+          clubsList.push(clubName);
+          populateClubDropdowns();
+          showToast(`Added club "${clubName}" locally!`, "info");
+        }
+      } else {
+        clubsList.push(clubName);
+        populateClubDropdowns();
+        showToast(`Added club "${clubName}" locally!`, "success");
+      }
+
+      document.getElementById('new-club-name').value = '';
+      renderAdminClubsTable();
+    }
+
+    async function removeClub(name) {
+      if (confirm(`Are you sure you want to delete "${name}"? Existing reports will remain archived.`)) {
+        if (supabaseClient) {
+          try {
+            const { error } = await supabaseClient.from('clubs').delete().eq('name', name);
+            if (error) throw error;
+            showToast(`Deleted club "${name}" from Supabase!`, "success");
+            clubsList = clubsList.filter(c => c !== name);
+            populateClubDropdowns();
+            await fetchClubs();
+          } catch (err) {
+            console.error("Supabase delete club error:", err);
+            clubsList = clubsList.filter(c => c !== name);
+            populateClubDropdowns();
+            showToast(`Removed club "${name}" locally.`, "info");
+            renderAdminClubsTable();
+          }
+        } else {
+          clubsList = clubsList.filter(c => c !== name);
+          populateClubDropdowns();
+          showToast(`Removed club "${name}" locally.`, "info");
+          renderAdminClubsTable();
+        }
+      }
+    }
+
+    function renderAdminClubsTable() {
+      const tbody = document.getElementById('admin-clubs-tbody');
+      document.getElementById('clubs-count-badge').innerText = `${clubsList.length} Active Clubs`;
+
+      tbody.innerHTML = clubsList.map(club => {
+        const reportCount = reportsData.filter(r => r.club_name === club).length;
+        const leads = usersData.filter(u => u.assigned_club === club).map(u => u.full_name).join(', ') || 'None assigned';
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3 px-4 font-bold text-sky-400 flex items-center space-x-2">
+              <i data-lucide="shield" class="w-4 h-4 text-sky-500"></i>
+              <span>${escapeHtml(club)}</span>
+            </td>
+            <td class="py-3 px-4 font-medium text-slate-300">${reportCount} reports</td>
+            <td class="py-3 px-4 text-slate-400 text-xs">${escapeHtml(leads)}</td>
+            <td class="py-3 px-4 text-right">
+              <button onclick="removeClub('${escapeHtml(club)}')" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition">Delete Club</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // --- USER PERMISSION MANAGEMENT ---
+    async function handleAddUser(e) {
+      e.preventDefault();
+      const email = document.getElementById('new-user-email').value.trim().toLowerCase();
+      const name = document.getElementById('new-user-name').value.trim();
+      const club = document.getElementById('new-user-club').value;
+      const role = document.getElementById('new-user-role').value;
+
+      let priority = 4;
+      if (role === 'admin') priority = 1;
+      else if (role === 'lead') priority = 2;
+      else if (role === 'sub_lead') priority = 3;
+
+      const newUser = {
+        id: Date.now().toString(),
+        email: email,
+        full_name: name,
+        assigned_club: club,
+        role: role,
+        role_title: `${club} ${role.toUpperCase()}`,
+        priority_level: priority
+      };
+
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('users').insert([newUser]).select();
+          if (error) throw error;
+          if (data && data[0]) usersData.push(data[0]);
+          else await fetchUsers();
+          showToast(`Authorized user ${email} added successfully!`, "success");
+        } catch (err) {
+          usersData.push(newUser);
+          mockUsers.push(newUser);
+          showToast(`User ${email} authorized locally!`, "success");
+        }
+      } else {
+        usersData.push(newUser);
+        mockUsers.push(newUser);
+        showToast(`User ${email} authorized locally!`, "success");
+      }
+
+      document.getElementById('new-user-email').value = '';
+      document.getElementById('new-user-name').value = '';
+      renderAdminUsersTable();
+    }
+
+    async function removeUser(id, email) {
+      if (!confirm(`Are you sure you want to revoke access for ${email}?`)) return;
+
+      if (supabaseClient) {
+        try {
+          const { error } = await supabaseClient.from('users').delete().eq('id', id);
+          if (error) throw error;
+          showToast(`Access revoked for ${email} on Supabase!`, "success");
+          await fetchUsers();
+        } catch (err) {
+          console.error("Supabase delete user error:", err);
+          usersData = usersData.filter(u => u.id.toString() !== id.toString());
+          mockUsers = mockUsers.filter(u => u.id.toString() !== id.toString());
+          showToast(`Revoked access for ${email} locally.`, "info");
+          renderAdminUsersTable();
+        }
+      } else {
+        usersData = usersData.filter(u => u.id.toString() !== id.toString());
+        mockUsers = mockUsers.filter(u => u.id.toString() !== id.toString());
+        showToast("User access revoked locally.", "info");
+        renderAdminUsersTable();
+      }
+    }
+
+    // --- TABLE RENDERING & FILTERING ---
+    function renderClubHistory() {
+      const tbody = document.getElementById('club-history-tbody');
+      document.getElementById('club-history-title').innerText = `${selectedClub} - History`;
+
+      const filtered = reportsData.filter(r => r.club_name === selectedClub);
+      document.getElementById('club-history-count').innerText = `${filtered.length} Reports`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No reports found for ${selectedClub}.</td></tr>`;
+        lucide.createIcons();
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="py-3 px-4 text-slate-300 font-mono text-xs">${r.reporting_date}</td>
+          <td class="py-3 px-4 font-semibold text-white">${escapeHtml(r.activity_title)}</td>
+          <td class="py-3 px-4 text-slate-400">${escapeHtml(r.submitted_by)} <span class="text-xs text-slate-500">(${escapeHtml(r.role_title)})</span></td>
+          <td class="py-3 px-4"><span class="font-medium text-white">${r.present_members}/${r.enrolled_members}</span> <span class="text-xs text-sky-400 ml-1">(${r.attendance_rate}%)</span></td>
+          <td class="py-3 px-4">${getStatusBadge(r.activity_status)}</td>
+          <td class="py-3 px-4">${getImpactBadge(r.impact_level)}</td>
+          <td class="py-3 px-4 text-right"><button onclick='openDetailModal("${r.id}")' class="text-sky-400 hover:text-sky-300 font-medium text-xs bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 hover:bg-sky-500/20 transition">Inspect</button></td>
+        </tr>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function renderAdminDashboard() {
+      const totalReports = reportsData.length;
+      let avgAttendance = 0;
+      if (totalReports > 0) {
+        const sumRate = reportsData.reduce((acc, r) => acc + (parseFloat(r.attendance_rate) || 0), 0);
+        avgAttendance = (sumRate / totalReports).toFixed(1);
+      }
+      const flaggedChallenges = reportsData.filter(r => r.impact_level === 'High').length;
+
+      document.getElementById('kpi-total-reports').innerText = totalReports;
+      document.getElementById('kpi-avg-attendance').innerText = `${avgAttendance}%`;
+      document.getElementById('kpi-flagged-challenges').innerText = flaggedChallenges;
+
+      // Filter Status UI Feedback
+      const summaryText = document.getElementById('admin-table-summary-text');
+      const csvBtnText = document.getElementById('csv-export-btn-text');
+      const excelBtnText = document.getElementById('excel-export-btn-text');
+
+      let clubPart = adminClubFilter === 'ALL' ? 'All Clubs' : adminClubFilter;
+      let datePart = adminDateFilter === 'ALL' ? 'All Weeks' : `Week of ${adminDateFilter}`;
+
+      summaryText.innerText = `Showing reports for: [ ${clubPart} ] • [ ${datePart} ].`;
+      csvBtnText.innerText = `Export CSV (${adminClubFilter === 'ALL' ? 'Joint' : 'Separate'})`;
+      excelBtnText.innerText = `Export Excel (${adminClubFilter === 'ALL' ? 'Joint' : 'Separate'})`;
+
+      let filtered = [...reportsData];
+      if (adminClubFilter !== 'ALL') filtered = filtered.filter(r => r.club_name === adminClubFilter);
+      if (adminDateFilter !== 'ALL') filtered = filtered.filter(r => r.reporting_date === adminDateFilter);
+      if (adminStatusFilter !== 'ALL') filtered = filtered.filter(r => r.activity_status === adminStatusFilter);
+      if (adminSearch.trim() !== '') {
+        const q = adminSearch.toLowerCase();
+        filtered = filtered.filter(r => (r.activity_title && r.activity_title.toLowerCase().includes(q)) || (r.club_name && r.club_name.toLowerCase().includes(q)) || (r.submitted_by && r.submitted_by.toLowerCase().includes(q)));
+      }
+
+      const tbody = document.getElementById('admin-master-tbody');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-500"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>No reports match the active filters.</td></tr>`;
+        lucide.createIcons();
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="py-3 px-4 font-semibold text-sky-400">${escapeHtml(r.club_name)}</td>
+          <td class="py-3 px-4 text-slate-300 font-mono text-xs">${r.reporting_date}</td>
+          <td class="py-3 px-4 font-medium text-white max-w-xs truncate">${escapeHtml(r.activity_title)}</td>
+          <td class="py-3 px-4 text-slate-400">${escapeHtml(r.submitted_by)}</td>
+          <td class="py-3 px-4"><span class="text-white">${r.present_members}/${r.enrolled_members}</span> <span class="text-xs text-sky-400 font-semibold ml-1">(${r.attendance_rate}%)</span></td>
+          <td class="py-3 px-4">${getStatusBadge(r.activity_status)}</td>
+          <td class="py-3 px-4">${getImpactBadge(r.impact_level)}</td>
+          <td class="py-3 px-4 text-right"><button onclick='openDetailModal("${r.id}")' class="text-slate-300 hover:text-white font-medium text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 hover:bg-slate-700 transition">Inspect</button></td>
+        </tr>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function renderAdminUsersTable() {
+      const tbody = document.getElementById('admin-users-tbody');
+      document.getElementById('user-count-badge').innerText = `${usersData.length} Active Accounts`;
+
+      tbody.innerHTML = usersData.map(u => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="py-3 px-4 font-semibold text-white">${escapeHtml(u.full_name)}</td>
+          <td class="py-3 px-4 text-slate-300 font-mono text-xs">${escapeHtml(u.email)}</td>
+          <td class="py-3 px-4">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${u.role === 'admin' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-sky-500/10 text-sky-400 border border-sky-500/20'}">
+              ${u.role.toUpperCase()} (P${u.priority_level})
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-300 font-medium">${escapeHtml(u.assigned_club)}</td>
+          <td class="py-3 px-4 text-right">
+            ${u.email !== currentUser.email ? `<button onclick="removeUser('${u.id}', '${escapeHtml(u.email)}')" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition">Revoke</button>` : `<span class="text-xs text-slate-500">Current User</span>`}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function onAdminFilterChange() {
+      adminSearch = document.getElementById('admin-search').value;
+      adminClubFilter = document.getElementById('admin-club-filter').value;
+      adminDateFilter = document.getElementById('admin-date-filter').value;
+      adminStatusFilter = document.getElementById('admin-status-filter').value;
+      renderAdminDashboard();
+    }
+
+    // --- BADGES & MODALS ---
+    function getStatusBadge(status) {
+      switch (status) {
+        case 'Completed': return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Completed</span>`;
+        case 'In Progress': return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">In Progress</span>`;
+        case 'Postponed': return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Postponed</span>`;
+        case 'Cancelled': return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">Cancelled</span>`;
+        default: return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400">${status || 'Unknown'}</span>`;
+      }
+    }
+
+    function getImpactBadge(impact) {
+      switch (impact) {
+        case 'High': return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">High Impact</span>`;
+        case 'Medium': return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Medium Impact</span>`;
+        case 'Low': return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">Low Impact</span>`;
+        case 'None': default: return `<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400">None</span>`;
+      }
+    }
+
+    function openDetailModal(id) {
+      const report = reportsData.find(r => r.id.toString() === id.toString());
+      if (!report) return;
+
+      document.getElementById('modal-club-name').innerText = report.club_name;
+      document.getElementById('modal-date').innerText = `Submitted on ${report.reporting_date} by ${report.submitted_by} (${report.role_title})`;
+
+      const body = document.getElementById('modal-body-content');
+      body.innerHTML = `
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+          <div><span class="text-xs text-slate-500 block">Enrolled</span><span class="font-bold text-white">${report.enrolled_members}</span></div>
+          <div><span class="text-xs text-slate-500 block">Present</span><span class="font-bold text-emerald-400">${report.present_members}</span></div>
+          <div><span class="text-xs text-slate-500 block">Absent</span><span class="font-bold text-rose-400">${report.absent_members}</span></div>
+          <div><span class="text-xs text-slate-500 block">Turnout Rate</span><span class="font-bold text-sky-400">${report.attendance_rate}%</span></div>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-white mb-1">Activity Title & Status</h4>
+          <div class="flex items-center space-x-3"><span class="text-base text-sky-300 font-bold">${escapeHtml(report.activity_title)}</span>${getStatusBadge(report.activity_status)}</div>
+          <p class="mt-2 text-slate-300 bg-slate-950/40 p-3 rounded-lg border border-slate-800/60">${escapeHtml(report.activity_description || 'No description provided.')}</p>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-white mb-1">Key Deliverables & Outcomes</h4>
+          <p class="text-slate-300 bg-slate-950/40 p-3 rounded-lg border border-slate-800/60">${escapeHtml(report.key_deliverables || 'None recorded.')}</p>
+        </div>
+
+        <div class="border-t border-slate-800 pt-4">
+          <div class="flex items-center justify-between mb-1"><h4 class="font-semibold text-white">Challenges & Immediate Action</h4>${getImpactBadge(report.impact_level)}</div>
+          <div class="space-y-2 mt-2">
+            <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-800/60"><span class="text-xs font-semibold text-rose-400 block mb-1">Challenge:</span><span>${escapeHtml(report.challenges || 'No challenges faced.')}</span></div>
+            <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-800/60"><span class="text-xs font-semibold text-sky-400 block mb-1">Immediate Action:</span><span>${escapeHtml(report.immediate_action || 'N/A')}</span></div>
+            <div class="bg-slate-950/40 p-3 rounded-lg border border-slate-800/60"><span class="text-xs font-semibold text-amber-400 block mb-1">Suggestions:</span><span>${escapeHtml(report.suggestions || 'N/A')}</span></div>
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-detail').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('modal-detail').classList.add('hidden'); }
+
+    // --- REAL EXPORTS (SEPARATE & JOINT OPTIONS FOR CLUBS & WEEKS) ---
+    function formatReportRows(dataset) {
+      return dataset.map(r => ({
+        "ID": r.id,
+        "Club Name": r.club_name,
+        "Reporting Date": r.reporting_date,
+        "Submitted By": r.submitted_by,
+        "Role Title": r.role_title,
+        "Enrolled Members": r.enrolled_members,
+        "Present Members": r.present_members,
+        "Absent Members": r.absent_members,
+        "Attendance Rate (%)": r.attendance_rate,
+        "Activity Title": r.activity_title,
+        "Activity Description": r.activity_description || "",
+        "Key Deliverables": r.key_deliverables || "",
+        "Activity Status": r.activity_status,
+        "Challenges": r.challenges || "",
+        "Impact Level": r.impact_level,
+        "Immediate Action": r.immediate_action || "",
+        "Suggestions": r.suggestions || "",
+        "Planned Activity": r.planned_activity || "",
+        "Support Needed": r.support_needed || ""
+      }));
+    }
+
+    // Export CSV or Excel based on active Club + Date filters (Separate or Joint)
+    function exportData(format = 'csv') {
+      let dataset = [...reportsData];
+      let labelParts = [];
+
+      if (adminClubFilter !== 'ALL') {
+        dataset = dataset.filter(r => r.club_name === adminClubFilter);
+        labelParts.push(adminClubFilter.toLowerCase().replace(/\s+/g, '_'));
+      } else {
+        labelParts.push("joint_all_clubs");
+      }
+
+      if (adminDateFilter !== 'ALL') {
+        dataset = dataset.filter(r => r.reporting_date === adminDateFilter);
+        labelParts.push(`week_${adminDateFilter}`);
+      } else {
+        labelParts.push("all_weeks");
+      }
+
+      if (dataset.length === 0) return showToast("No reports found for the selected filter combination.", "warning");
+
+      const formattedData = formatReportRows(dataset);
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filenameBase = `report_${labelParts.join('_')}_${dateStr}`;
+
+      if (format === 'csv') {
+        const headers = Object.keys(formattedData[0]);
+        const csvRows = [headers.join(',')];
+        for (const row of formattedData) {
+          const values = headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`);
+          csvRows.push(values.join(','));
+        }
+
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const filename = `${filenameBase}.csv`;
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast(`Exported ${filename} successfully!`, "success");
+      } else {
+        if (typeof XLSX === 'undefined') return showToast("Excel library loading...", "error");
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        const sheetName = adminClubFilter === 'ALL' ? "Filtered Reports" : adminClubFilter.substring(0, 30);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+        const filename = `${filenameBase}.xlsx`;
+        XLSX.writeFile(workbook, filename);
+        showToast(`Exported ${filename} successfully!`, "success");
+      }
+    }
+
+    // Multi-Sheet Club Workbook (Separate Worksheet for Each Club)
+    function exportMultiSheetClubExcel() {
+      if (reportsData.length === 0) return showToast("No report data available to export.", "warning");
+      if (typeof XLSX === 'undefined') return showToast("Excel library loading...", "error");
+
+      const workbook = XLSX.utils.book_new();
+
+      // Master Joint Sheet
+      const masterData = formatReportRows(reportsData);
+      const masterSheet = XLSX.utils.json_to_sheet(masterData);
+      XLSX.utils.book_append_sheet(workbook, masterSheet, "All Clubs (Joint Master)");
+
+      // Separate Sheets per Club
+      clubsList.forEach(club => {
+        const clubReports = reportsData.filter(r => r.club_name === club);
+        if (clubReports.length > 0) {
+          const sheetData = formatReportRows(clubReports);
+          const sheet = XLSX.utils.json_to_sheet(sheetData);
+          const safeSheetName = club.substring(0, 30).replace(/[:\\/?*\[\]]/g, '_');
+          XLSX.utils.book_append_sheet(workbook, sheet, safeSheetName);
+        }
+      });
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `club_multi_sheet_workbook_${dateStr}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+      showToast(`Exported ${filename} with separate club sheets!`, "success");
+    }
+
+    // Multi-Sheet Weekly Workbook (Separate Worksheet for Each Reporting Week/Date)
+    function exportMultiSheetWeeklyExcel() {
+      if (reportsData.length === 0) return showToast("No report data available to export.", "warning");
+      if (typeof XLSX === 'undefined') return showToast("Excel library loading...", "error");
+
+      const workbook = XLSX.utils.book_new();
+
+      // Master Joint Sheet
+      const masterData = formatReportRows(reportsData);
+      const masterSheet = XLSX.utils.json_to_sheet(masterData);
+      XLSX.utils.book_append_sheet(workbook, masterSheet, "All Weeks (Joint Master)");
+
+      // Separate Sheets per Reporting Date/Week
+      const uniqueDates = [...new Set(reportsData.map(r => r.reporting_date))].sort().reverse();
+      uniqueDates.forEach(dateVal => {
+        const weekReports = reportsData.filter(r => r.reporting_date === dateVal);
+        if (weekReports.length > 0) {
+          const sheetData = formatReportRows(weekReports);
+          const sheet = XLSX.utils.json_to_sheet(sheetData);
+          const safeSheetName = `Week_${dateVal}`.substring(0, 30);
+          XLSX.utils.book_append_sheet(workbook, sheet, safeSheetName);
+        }
+      });
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const filename = `weekly_multi_sheet_workbook_${dateStr}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+      showToast(`Exported ${filename} with separate weekly sheets!`, "success");
+    }
+
+    // --- TOAST HELPER ---
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      let borderBg = "bg-slate-800 border-slate-700 text-slate-200";
+      let icon = "info";
+      if (type === 'success') { borderBg = "bg-emerald-950/90 border-emerald-700/80 text-emerald-200"; icon = "check-circle-2"; }
+      else if (type === 'error') { borderBg = "bg-rose-950/90 border-rose-700/80 text-rose-200"; icon = "alert-triangle"; }
+      else if (type === 'warning') { borderBg = "bg-amber-950/90 border-amber-700/80 text-amber-200"; icon = "alert-circle"; }
+
+      toast.className = `flex items-center space-x-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur text-sm pointer-events-auto transform transition-all duration-300 opacity-0 ${borderBg}`;
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 shrink-0"></i><span>${escapeHtml(message)}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      requestAnimationFrame(() => toast.classList.remove('opacity-0'));
+      setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
