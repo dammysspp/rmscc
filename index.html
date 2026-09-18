@@ -2,7 +2,8 @@
 <html lang="en" class="h-full bg-slate-900 text-slate-100">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
   <title>Weekly Co-Curricular Activities Reporting System</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -31,11 +32,36 @@
   <!-- SheetJS (xlsx) CDN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    /* Mobile Touch & Safe Area Optimizations */
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
+    }
+    body {
+      padding-top: var(--sat);
+      padding-bottom: var(--sab);
+      padding-left: var(--sal);
+      padding-right: var(--sar);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    /* Prevent iOS auto-zoom on inputs */
+    @media screen and (max-width: 640px) {
+      input, select, textarea {
+        font-size: 16px !important;
+      }
+    }
+    /* Touch target minimum sizes */
+    button, a, select {
+      min-height: 38px;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
-  </style>
+</style>
 </head>
 <body class="h-full flex flex-col font-sans bg-slate-900 text-slate-100 antialiased selection:bg-sky-500 selection:text-white">
 
@@ -195,11 +221,11 @@
         
         <!-- Role Switcher (Admin Only) -->
         <div id="role-switcher-container" class="hidden items-center bg-slate-900 p-0.5 sm:p-1 rounded-xl border border-slate-800">
-          <button id="btn-role-club" onclick="setRole('club')" class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all flex items-center space-x-1 bg-sky-600 text-white shadow-md">
+          <button type="button" id="btn-role-club" onclick="setRole('club')" class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all flex items-center space-x-1 bg-sky-600 text-white shadow-md">
             <i data-lucide="users" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i>
             <span>Club</span>
           </button>
-          <button id="btn-role-admin" onclick="setRole('admin')" class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all flex items-center space-x-1 text-slate-400 hover:text-white">
+          <button type="button" id="btn-role-admin" onclick="setRole('admin')" class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all flex items-center space-x-1 text-slate-400 hover:text-white">
             <i data-lucide="shield-check" class="w-3 h-3 sm:w-3.5 sm:h-3.5"></i>
             <span>Admin</span>
           </button>
@@ -211,7 +237,7 @@
             <p id="user-display-name" class="text-[11px] sm:text-xs font-bold text-white leading-tight truncate">User Name</p>
             <p id="user-display-role" class="text-[9px] sm:text-[11px] text-sky-400 font-medium truncate">Role • Club</p>
           </div>
-          <button onclick="handleLogout()" title="Sign Out" class="p-1.5 sm:p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 hover:bg-rose-500/10 transition shrink-0">
+          <button type="button" onclick="handleLogout()" title="Sign Out" aria-label="Sign Out" class="p-1.5 sm:p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 hover:bg-rose-500/10 transition shrink-0">
             <i data-lucide="log-out" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
           </button>
         </div>
@@ -251,7 +277,7 @@
 
         <button type="submit" id="btn-login" class="w-full py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-sky-500/25 transition-all flex items-center justify-center space-x-2">
           <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
-          <span>Authenticate & Access</span>
+          <span>Authenticate &amp; Access</span>
         </button>
       </form>
     </div>
@@ -283,11 +309,11 @@
 
         <!-- Sub-Tabs Switcher -->
         <div class="flex items-center space-x-1 sm:space-x-2 bg-slate-900/80 p-1 rounded-xl border border-slate-800 w-full sm:w-auto justify-stretch">
-          <button id="tab-btn-submit" onclick="setClubTab('submit')" class="flex-1 sm:flex-none px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 bg-sky-600 text-white shadow-sm">
+          <button type="button" id="tab-btn-submit" onclick="setClubTab('submit')" class="flex-1 sm:flex-none px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 bg-sky-600 text-white shadow-sm">
             <i data-lucide="file-plus" class="w-3.5 h-3.5"></i>
             <span>Submit Report</span>
           </button>
-          <button id="tab-btn-history" onclick="setClubTab('history')" class="flex-1 sm:flex-none px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 text-slate-400 hover:text-white">
+          <button type="button" id="tab-btn-history" onclick="setClubTab('history')" class="flex-1 sm:flex-none px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 text-slate-400 hover:text-white">
             <i data-lucide="history" class="w-3.5 h-3.5"></i>
             <span>My Club History</span>
           </button>
@@ -310,7 +336,7 @@
           <div class="space-y-4">
             <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
               <i data-lucide="user-check" class="w-4 h-4"></i>
-              <span>1. Basic Details & Ownership</span>
+              <span>1. Basic Details &amp; Ownership</span>
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -332,7 +358,7 @@
           <div class="space-y-4 pt-4 border-t border-slate-800/60">
             <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
               <i data-lucide="users" class="w-4 h-4"></i>
-              <span>2. Attendance & Turnout</span>
+              <span>2. Attendance &amp; Turnout</span>
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
@@ -358,7 +384,7 @@
           <div class="space-y-4 pt-4 border-t border-slate-800/60">
             <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
               <i data-lucide="activity" class="w-4 h-4"></i>
-              <span>3. Activity & Deliverables</span>
+              <span>3. Activity &amp; Deliverables</span>
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div class="md:col-span-2">
@@ -391,7 +417,7 @@
           <div class="space-y-4 pt-4 border-t border-slate-800/60">
             <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
               <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-              <span>4. Challenges & Immediate Actions</span>
+              <span>4. Challenges &amp; Immediate Actions</span>
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div class="md:col-span-2">
@@ -424,7 +450,7 @@
           <div class="space-y-4 pt-4 border-t border-slate-800/60">
             <h3 class="text-sm font-semibold uppercase tracking-wider text-sky-400 flex items-center space-x-2">
               <i data-lucide="calendar" class="w-4 h-4"></i>
-              <span>5. Next Week Planning & Support Requested</span>
+              <span>5. Next Week Planning &amp; Support Requested</span>
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -490,15 +516,15 @@
 
       <!-- Admin Sub-Navigation Tabs -->
       <div class="flex flex-wrap items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 w-fit">
-        <button id="admin-subtab-btn-reports" onclick="setAdminSubTab('reports')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 bg-sky-600 text-white shadow">
+        <button type="button" id="admin-subtab-btn-reports" onclick="setAdminSubTab('reports')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 bg-sky-600 text-white shadow">
           <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-          <span>Global Reports & Master Data</span>
+          <span>Global Reports &amp; Master Data</span>
         </button>
-        <button id="admin-subtab-btn-users" onclick="setAdminSubTab('users')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+        <button type="button" id="admin-subtab-btn-users" onclick="setAdminSubTab('users')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
           <i data-lucide="user-cog" class="w-4 h-4"></i>
-          <span>User & Role Permissions</span>
+          <span>User &amp; Role Permissions</span>
         </button>
-        <button id="admin-subtab-btn-clubs" onclick="setAdminSubTab('clubs')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
+        <button type="button" id="admin-subtab-btn-clubs" onclick="setAdminSubTab('clubs')" class="px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 text-slate-400 hover:text-white">
           <i data-lucide="layers" class="w-4 h-4"></i>
           <span>Manage Clubs</span>
         </button>
@@ -574,24 +600,24 @@
 
             <!-- Export Action Buttons -->
             <div class="flex flex-wrap items-center gap-2 shrink-0">
-              <button onclick="exportData('csv')" title="Export current filtered view to CSV" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-medium transition flex items-center space-x-1.5 shadow">
+              <button type="button" onclick="exportData('csv')" title="Export current filtered view to CSV" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-100 text-xs font-medium transition flex items-center space-x-1.5 shadow">
                 <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i>
                 <span id="csv-export-btn-text">CSV Export</span>
               </button>
               
-              <button onclick="exportData('excel')" title="Export current view to Excel" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-emerald-600/20">
+              <button type="button" onclick="exportData('excel')" title="Export current view to Excel" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-emerald-600/20">
                 <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
                 <span id="excel-export-btn-text">Excel Export</span>
               </button>
 
               <!-- Multi-Sheet Club Workbook -->
-              <button onclick="exportMultiSheetClubExcel()" title="Export workbook with separate sheets for each Club" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20">
+              <button type="button" onclick="exportMultiSheetClubExcel()" title="Export workbook with separate sheets for each Club" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20">
                 <i data-lucide="layers" class="w-3.5 h-3.5"></i>
                 <span>Club Workbook (.xlsx)</span>
               </button>
 
               <!-- Multi-Sheet Weekly Workbook -->
-              <button onclick="exportMultiSheetWeeklyExcel()" title="Export workbook with separate sheets for each Reporting Week/Date" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-sky-600/20">
+              <button type="button" onclick="exportMultiSheetWeeklyExcel()" title="Export workbook with separate sheets for each Reporting Week/Date" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-sky-600/20">
                 <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
                 <span>Weekly Workbook (.xlsx)</span>
               </button>
@@ -677,7 +703,7 @@
         <!-- Authorized Users List Table -->
         <div class="bg-slate-800/30 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
-            <h4 class="font-bold text-white text-sm">Authorized User Accounts & Permissions</h4>
+            <h4 class="font-bold text-white text-sm">Authorized User Accounts &amp; Permissions</h4>
             <span id="user-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">0 Active Users</span>
           </div>
           <div class="overflow-x-auto">
@@ -686,7 +712,7 @@
                 <tr class="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/40">
                   <th class="py-3 px-4">User</th>
                   <th class="py-3 px-4">Email</th>
-                  <th class="py-3 px-4">Role & Priority</th>
+                  <th class="py-3 px-4">Role &amp; Priority</th>
                   <th class="py-3 px-4">Assigned Club</th>
                   <th class="py-3 px-4 text-right">Actions</th>
                 </tr>
@@ -753,7 +779,7 @@
   <!-- ========================================== -->
   <!-- MODAL: DETAILED REPORT VIEW                -->
   <!-- ========================================== -->
-  <div id="modal-detail" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+  <div id="modal-detail" onclick="handleModalBackdropClick(event)" class="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/80 backdrop-blur-sm hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
       <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
         <div class="flex items-center space-x-3">
@@ -765,7 +791,7 @@
             <p id="modal-date" class="text-xs text-slate-400">Date</p>
           </div>
         </div>
-        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+        <button type="button" onclick="closeModal()" aria-label="Close modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -775,7 +801,7 @@
       </div>
 
       <div class="px-6 py-3 border-t border-slate-800 bg-slate-950 flex justify-end">
-        <button onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition">
+        <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition">
           Close Window
         </button>
       </div>
@@ -830,22 +856,45 @@
       handleLoginSubmit(new Event('submit'));
     }
 
-    async function handleLoginSubmit(e) {
+        async function handleLoginSubmit(e) {
       if (e) e.preventDefault();
       const inputEmail = document.getElementById('login-email').value.trim().toLowerCase();
       if (!inputEmail) return;
 
-      let user = usersData.find(u => u.email.toLowerCase() === inputEmail) || mockUsers.find(u => u.email.toLowerCase() === inputEmail);
+      const loginBtn = document.getElementById('btn-login');
+      const originalText = loginBtn.innerHTML;
+      loginBtn.disabled = true;
+      loginBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>Verifying...</span>';
+      lucide.createIcons();
 
-      if (!user) {
-        showToast(`Email ${inputEmail} is not authorized. Contact an administrator.`, "error");
-        return;
+      try {
+        // If usersData is empty and Supabase is configured, fetch live users first
+        if (usersData.length === 0 && supabaseClient) {
+          await fetchUsers();
+        }
+
+        let user = usersData.find(u => u.email.toLowerCase() === inputEmail) || mockUsers.find(u => u.email.toLowerCase() === inputEmail);
+
+        if (!user) {
+          showToast(`Email ${inputEmail} is not authorized. Contact an administrator.`, "error");
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = originalText;
+          lucide.createIcons();
+          return;
+        }
+
+        currentUser = user;
+        sessionStorage.setItem('co_curr_user', JSON.stringify(currentUser));
+        showToast(`Welcome back, ${currentUser.full_name}!`, "success");
+        initUserSession();
+      } catch (err) {
+        console.error("Login verification error:", err);
+        showToast("Error connecting to authorization server.", "error");
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = originalText;
+        lucide.createIcons();
       }
-
-      currentUser = user;
-      sessionStorage.setItem('co_curr_user', JSON.stringify(currentUser));
-      showToast(`Welcome back, ${currentUser.full_name}!`, "success");
-      initUserSession();
     }
 
     function handleLogout() {
@@ -1020,6 +1069,12 @@
       const absent = parseInt(document.getElementById('field-absent').value) || 0;
       const attendance_rate = enrolled > 0 ? parseFloat(((present / enrolled) * 100).toFixed(1)) : 0;
 
+            const submitBtn = document.getElementById('btn-submit-form');
+      const originalSubmitHtml = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>Saving...</span>';
+      lucide.createIcons();
+
       const newReport = {
         club_name: selectedClub,
         reporting_date: document.getElementById('field-reporting-date').value,
@@ -1072,6 +1127,9 @@
       document.getElementById('field-planned-activity').value = '';
       document.getElementById('field-support-needed').value = '';
 
+            submitBtn.disabled = false;
+      submitBtn.innerHTML = originalSubmitHtml;
+      lucide.createIcons();
       setClubTab('history');
     }
 
@@ -1169,7 +1227,7 @@
             <td class="py-3 px-4 font-medium text-slate-300">${reportCount} reports</td>
             <td class="py-3 px-4 text-slate-400 text-xs">${escapeHtml(leads)}</td>
             <td class="py-3 px-4 text-right">
-              <button onclick="removeClub('${escapeHtml(club)}')" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition">Delete Club</button>
+              <button onclick="removeClub('${escapeHtml(club)}')" type="button" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition">Delete Club</button>
             </td>
           </tr>
         `;
@@ -1273,7 +1331,7 @@
           <td class="py-3 px-4"><span class="font-medium text-white">${r.present_members}/${r.enrolled_members}</span> <span class="text-xs text-sky-400 ml-1">(${r.attendance_rate}%)</span></td>
           <td class="py-3 px-4">${getStatusBadge(r.activity_status)}</td>
           <td class="py-3 px-4">${getImpactBadge(r.impact_level)}</td>
-          <td class="py-3 px-4 text-right"><button onclick='openDetailModal("${r.id}")' class="text-sky-400 hover:text-sky-300 font-medium text-xs bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 hover:bg-sky-500/20 transition">Inspect</button></td>
+          <td class="py-3 px-4 text-right"><button onclick='openDetailModal("${r.id}")' type="button" class="text-sky-400 hover:text-sky-300 font-medium text-xs bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 hover:bg-sky-500/20 transition">Inspect</button></td>
         </tr>
       `).join('');
       lucide.createIcons();
@@ -1329,7 +1387,7 @@
           <td class="py-3 px-4"><span class="text-white">${r.present_members}/${r.enrolled_members}</span> <span class="text-xs text-sky-400 font-semibold ml-1">(${r.attendance_rate}%)</span></td>
           <td class="py-3 px-4">${getStatusBadge(r.activity_status)}</td>
           <td class="py-3 px-4">${getImpactBadge(r.impact_level)}</td>
-          <td class="py-3 px-4 text-right"><button onclick='openDetailModal("${r.id}")' class="text-slate-300 hover:text-white font-medium text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 hover:bg-slate-700 transition">Inspect</button></td>
+          <td class="py-3 px-4 text-right"><button onclick='openDetailModal("${r.id}")' type="button" class="text-slate-300 hover:text-white font-medium text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 hover:bg-slate-700 transition">Inspect</button></td>
         </tr>
       `).join('');
       lucide.createIcons();
@@ -1350,7 +1408,7 @@
           </td>
           <td class="py-3 px-4 text-slate-300 font-medium">${escapeHtml(u.assigned_club)}</td>
           <td class="py-3 px-4 text-right">
-            ${u.email !== currentUser.email ? `<button onclick="removeUser('${u.id}', '${escapeHtml(u.email)}')" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition">Revoke</button>` : `<span class="text-xs text-slate-500">Current User</span>`}
+            ${u.email !== currentUser.email ? `<button onclick="removeUser('${u.id}', '${escapeHtml(u.email)}')" type="button" class="text-rose-400 hover:text-rose-300 text-xs bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition">Revoke</button>` : `<span class="text-xs text-slate-500">Current User</span>`}
           </td>
         </tr>
       `).join('');
@@ -1420,10 +1478,35 @@
           </div>
         </div>
       `;
+      body.innerHTML += `
+        <div class="border-t border-slate-800 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-semibold text-white mb-1">Planned Activity (Next Week)</h4>
+            <p class="text-slate-300 bg-slate-950/40 p-3 rounded-lg border border-slate-800/60 text-xs sm:text-sm">${escapeHtml(report.planned_activity || 'None planned.')}</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-white mb-1">Support Needed</h4>
+            <p class="text-slate-300 bg-slate-950/40 p-3 rounded-lg border border-slate-800/60 text-xs sm:text-sm">${escapeHtml(report.support_needed || 'None requested.')}</p>
+          </div>
+        </div>
+`;
       document.getElementById('modal-detail').classList.remove('hidden');
     }
 
     function closeModal() { document.getElementById('modal-detail').classList.add('hidden'); }
+
+    function handleModalBackdropClick(e) {
+      if (e.target.id === 'modal-detail') {
+        closeModal();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+
 
     // --- REAL EXPORTS (SEPARATE & JOINT OPTIONS FOR CLUBS & WEEKS) ---
     function formatReportRows(dataset) {
@@ -1483,7 +1566,7 @@
           csvRows.push(values.join(','));
         }
 
-        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         const filename = `${filenameBase}.csv`;
