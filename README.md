@@ -93,6 +93,7 @@ ALTER TABLE public.clubs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public read on club_reports" ON public.club_reports FOR SELECT USING (true);
 CREATE POLICY "Allow public insert on club_reports" ON public.club_reports FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on club_reports" ON public.club_reports FOR UPDATE USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow public read on users" ON public.users FOR SELECT USING (true);
 CREATE POLICY "Allow public insert on users" ON public.users FOR INSERT WITH CHECK (true);
