@@ -1172,54 +1172,61 @@
       const attendance_rate = enrolled > 0 ? parseFloat(((present / enrolled) * 100).toFixed(1)) : 0;
 
       const submitBtn = document.getElementById('btn-submit-form');
-      const originalSubmitHtml = submitBtn.innerHTML;
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>Saving...</span>';
       lucide.createIcons();
 
-      const reportPayload = {
-        club_name: selectedClub,
-        reporting_date: document.getElementById('field-reporting-date').value,
-        submitted_by: document.getElementById('field-submitted-by').value,
-        role_title: document.getElementById('field-role-title').value,
-        enrolled_members: enrolled,
-        present_members: present,
-        absent_members: absent,
-        attendance_rate: attendance_rate,
-        activity_title: document.getElementById('field-activity-title').value,
-        activity_description: document.getElementById('field-activity-description').value,
-        key_deliverables: document.getElementById('field-key-deliverables').value,
-        activity_status: document.getElementById('field-activity-status').value,
-        challenges: document.getElementById('field-challenges').value,
-        impact_level: document.getElementById('field-impact-level').value,
-        immediate_action: document.getElementById('field-immediate-action').value,
-        suggestions: document.getElementById('field-suggestions').value,
-        planned_activity: document.getElementById('field-planned-activity').value,
-        support_needed: document.getElementById('field-support-needed').value,
-      };
+      try {
+        const reportPayload = {
+          club_name: selectedClub,
+          reporting_date: document.getElementById('field-reporting-date').value,
+          submitted_by: document.getElementById('field-submitted-by').value,
+          role_title: document.getElementById('field-role-title').value,
+          enrolled_members: enrolled,
+          present_members: present,
+          absent_members: absent,
+          attendance_rate: attendance_rate,
+          activity_title: document.getElementById('field-activity-title').value,
+          activity_description: document.getElementById('field-activity-description').value,
+          key_deliverables: document.getElementById('field-key-deliverables').value,
+          activity_status: document.getElementById('field-activity-status').value,
+          challenges: document.getElementById('field-challenges').value,
+          impact_level: document.getElementById('field-impact-level').value,
+          immediate_action: document.getElementById('field-immediate-action').value,
+          suggestions: document.getElementById('field-suggestions').value,
+          planned_activity: document.getElementById('field-planned-activity').value,
+          support_needed: document.getElementById('field-support-needed').value,
+        };
 
-      const isEditing = Boolean(editingReportId);
-      const targetId = editingReportId;
+        const isEditing = Boolean(editingReportId);
+        const targetId = editingReportId;
 
-      if (isEditing) {
-        // --- UPDATE EXISTING REPORT ---
-        if (supabaseClient) {
-          try {
-            const { data, error } = await supabaseClient
-              .from('club_reports')
-              .update(reportPayload)
-              .eq('id', targetId)
-              .select();
-            if (error) throw error;
-            if (data && data[0]) {
+        if (isEditing) {
+          // --- UPDATE EXISTING REPORT ---
+          if (supabaseClient) {
+            try {
+              const { data, error } = await supabaseClient
+                .from('club_reports')
+                .update(reportPayload)
+                .eq('id', targetId)
+                .select();
+              if (error) throw error;
+              if (data && data[0]) {
+                const idx = reportsData.findIndex(r => r.id.toString() === targetId.toString());
+                if (idx !== -1) reportsData[idx] = data[0];
+              } else {
+                await fetchReports();
+              }
+              showToast("Report updated successfully in Supabase!", "success");
+            } catch (err) {
+              console.error("Supabase report update error:", err);
               const idx = reportsData.findIndex(r => r.id.toString() === targetId.toString());
-              if (idx !== -1) reportsData[idx] = data[0];
-            } else {
-              await fetchReports();
+              if (idx !== -1) {
+                reportsData[idx] = { ...reportsData[idx], ...reportPayload };
+              }
+              showToast("Report updated locally.", "info");
             }
-            showToast("Report updated successfully in Supabase!", "success");
-          } catch (err) {
-            console.error("Supabase report update error:", err);
+          } else {
             const idx = reportsData.findIndex(r => r.id.toString() === targetId.toString());
             if (idx !== -1) {
               reportsData[idx] = { ...reportsData[idx], ...reportPayload };
@@ -1227,23 +1234,25 @@
             showToast("Report updated locally.", "info");
           }
         } else {
-          const idx = reportsData.findIndex(r => r.id.toString() === targetId.toString());
-          if (idx !== -1) {
-            reportsData[idx] = { ...reportsData[idx], ...reportPayload };
-          }
-          showToast("Report updated locally.", "info");
-        }
-      } else {
-        // --- INSERT NEW REPORT ---
-        if (supabaseClient) {
-          try {
-            const { data, error } = await supabaseClient.from('club_reports').insert([reportPayload]).select();
-            if (error) throw error;
-            if (data && data[0]) reportsData.unshift(data[0]);
-            else await fetchReports();
-            showToast("Weekly report submitted successfully!", "success");
-          } catch (err) {
-            console.error("Supabase insert report error:", err);
+          // --- INSERT NEW REPORT ---
+          if (supabaseClient) {
+            try {
+              const { data, error } = await supabaseClient.from('club_reports').insert([reportPayload]).select();
+              if (error) throw error;
+              if (data && data[0]) reportsData.unshift(data[0]);
+              else await fetchReports();
+              showToast("Weekly report submitted successfully!", "success");
+            } catch (err) {
+              console.error("Supabase insert report error:", err);
+              const fallbackReport = {
+                id: Date.now().toString(),
+                created_at: new Date().toISOString(),
+                ...reportPayload
+              };
+              reportsData.unshift(fallbackReport);
+              showToast("Report saved locally!", "success");
+            }
+          } else {
             const fallbackReport = {
               id: Date.now().toString(),
               created_at: new Date().toISOString(),
@@ -1252,44 +1261,37 @@
             reportsData.unshift(fallbackReport);
             showToast("Report saved locally!", "success");
           }
-        } else {
-          const fallbackReport = {
-            id: Date.now().toString(),
-            created_at: new Date().toISOString(),
-            ...reportPayload
-          };
-          reportsData.unshift(fallbackReport);
-          showToast("Report saved locally!", "success");
         }
+
+        populateDateFilterDropdown();
+
+        // Reset Form and State
+        editingReportId = null;
+        document.getElementById('report-form').reset();
+        document.getElementById('field-reporting-date').value = new Date().toISOString().split('T')[0];
+        if (currentUser) {
+          document.getElementById('field-submitted-by').value = currentUser.full_name || '';
+          document.getElementById('field-role-title').value = currentUser.role_title || `${currentUser.assigned_club} Lead`;
+        }
+        document.getElementById('field-attendance-rate').value = '0.0%';
+
+        // Reset form labels & badges
+        document.getElementById('form-title-text').innerText = 'Weekly Activity Submission';
+        document.getElementById('form-subheading-text').innerText = 'Please provide accurate statistics and outcomes for the reporting period.';
+        const editBadge = document.getElementById('edit-indicator-badge');
+        if (editBadge) {
+          editBadge.classList.add('hidden');
+          editBadge.classList.remove('flex');
+        }
+        const cancelBtn = document.getElementById('btn-cancel-edit');
+        if (cancelBtn) cancelBtn.classList.add('hidden');
+
+        setClubTab('history');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i id="btn-submit-icon" data-lucide="send" class="w-5 h-5"></i><span id="btn-submit-text">Submit Report</span>';
+        lucide.createIcons();
       }
-
-      populateDateFilterDropdown();
-
-      // Reset Form and State
-      editingReportId = null;
-      document.getElementById('field-activity-title').value = '';
-      document.getElementById('field-activity-description').value = '';
-      document.getElementById('field-key-deliverables').value = '';
-      document.getElementById('field-challenges').value = '';
-      document.getElementById('field-immediate-action').value = '';
-      document.getElementById('field-suggestions').value = '';
-      document.getElementById('field-planned-activity').value = '';
-      document.getElementById('field-support-needed').value = '';
-
-      // Reset form labels & buttons
-      document.getElementById('form-title-text').innerText = 'Weekly Activity Submission';
-      document.getElementById('form-subheading-text').innerText = 'Please provide accurate statistics and outcomes for the reporting period.';
-      document.getElementById('edit-indicator-badge').classList.add('hidden');
-      document.getElementById('edit-indicator-badge').classList.remove('flex');
-      document.getElementById('btn-cancel-edit').classList.add('hidden');
-      document.getElementById('btn-submit-text').innerText = 'Submit Report';
-      document.getElementById('btn-submit-icon').setAttribute('data-lucide', 'send');
-
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalSubmitHtml;
-      lucide.createIcons();
-
-      setClubTab('history');
     }
 
     // --- CLUB MANAGEMENT (ADD & REMOVE CLUBS) ---
